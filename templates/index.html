@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Databases</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    table { border-collapse: collapse; margin: 10px 0 20px; }
+    th, td { border: 1px solid #999; padding: 4px 8px; }
+    th { background: #ddd; }
+  </style>
+</head>
+<body>
+  <h1>Databases</h1>
+
+  <form method="post" action="/reset">
+    Database:
+    <select onchange="location.href = '/' + this.value">
+      {% for key, item in databases.items() %}
+        <option value="{{ key }}" {% if key == db_name %}selected{% endif %}>{{ item.label }}</option>
+      {% endfor %}
+    </select>
+    <button>Reset data</button>
+  </form>
+
+  <h2>{{ db.label }} - {{ db.table }}</h2>
+  {% if db.ports|length > 1 %}
+    <p>Sharded by name: A-M on shard 1 (port {{ db.ports[0] }}), N-Z on shard 2 (port {{ db.ports[1] }})</p>
+  {% else %}
+    <p>PostgreSQL on port {{ db.ports[0] }}</p>
+  {% endif %}
+
+  <table>
+    <tr>
+      {% if db.ports|length > 1 %}<th>shard</th>{% endif %}
+      <th>id</th>
+      {% for col in db.columns %}<th>{{ col }}</th>{% endfor %}
+      <th></th>
+    </tr>
+    {% for row in rows %}
+    {% set form_id = "edit-" ~ row['shard'] ~ "-" ~ row['id'] %}
+    <tr>
+      {% if db.ports|length > 1 %}<td>{{ row['shard'] + 1 }}</td>{% endif %}
+      <td>{{ row['id'] }}</td>
+      {% for col in db.columns %}
+        <td><input name="{{ col }}" value="{{ row[col] }}" form="{{ form_id }}" required></td>
+      {% endfor %}
+      <td>
+        <form id="{{ form_id }}" method="post" action="/{{ db_name }}/update/{{ row['shard'] }}/{{ row['id'] }}" style="display:inline">
+          <button>Save</button>
+        </form>
+        <form method="post" action="/{{ db_name }}/delete/{{ row['shard'] }}/{{ row['id'] }}" style="display:inline">
+          <button>Delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h3>Add row</h3>
+  <form method="post" action="/{{ db_name }}/add">
+    {% for col in db.columns %}
+      <input name="{{ col }}" placeholder="{{ col }}" required>
+    {% endfor %}
+    <button>Add</button>
+  </form>
+</body>
+</html>
